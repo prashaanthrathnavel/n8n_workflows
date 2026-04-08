@@ -1,0 +1,511 @@
+{
+  "name": "Effort tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1024,
+        112
+      ],
+      "id": "cd16823c-4147-4dae-8480-a8e6fc2755bf",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5a4ed96-1170-4fb5-a320-1fb58b8e3885",
+              "name": "month",
+              "value": "November 2025",
+              "type": "string"
+            },
+            {
+              "id": "d964c829-ec02-4409-b70d-fa1597e0b9e6",
+              "name": "working_days_month",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "dcca41b2-702f-448f-8f8d-33f5a71ca04a",
+              "name": "days_elapsed",
+              "value": 19,
+              "type": "number"
+            },
+            {
+              "id": "641a74a2-31a3-45d4-9d05-646d3480d1b4",
+              "name": "hours_per_day",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "a3a93d2b-0269-428c-b9cf-a4310c034c42",
+              "name": "shortage_threshold",
+              "value": -10,
+              "type": "number"
+            },
+            {
+              "id": "5e8655c1-b5f2-4533-afda-98080813aa25",
+              "name": "excess_threshold",
+              "value": 5,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        112
+      ],
+      "id": "f7f4b9a5-c718-438d-b5f6-63c26cdefcd6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst configRows = $('n8n config').all();\nconst config = {};\nfor (const row of configRows) {\n  const key = row.json['Parameter'];\n  const val = row.json['Value'];\n  if (key) config[key.trim()] = val;\n}\n\nconst WORKING_DAYS     = Number(config['working_days_month']) || 20;\nconst DAYS_ELAPSED     = Number(config['days_elapsed'])       || 19;\nconst HOURS_PER_DAY    = Number(config['hours_per_day'])      || 8;\nconst SHORT_THRESHOLD  = Number(config['shortage_threshold']) || -10;\nconst EXCESS_THRESHOLD = Number(config['excess_threshold'])   ||  5;\nconst MONTH_LABEL      = config['month']                      || 'Current Month';\n\nconst FULL_AVAIL     = WORKING_DAYS * HOURS_PER_DAY;\nconst PRORATED_AVAIL = DAYS_ELAPSED * HOURS_PER_DAY;\n\nconst logRows = $('Time Log').all();\nconst clockedMap = {};\n\nfor (const row of logRows) {\n  const member = (row.json['Member'] || '').trim();\n  const hours  = Number(row.json['Hours Logged']) || 0;\n  if (!member) continue;\n  clockedMap[member] = (clockedMap[member] || 0) + hours;\n}\n\nconst results = [];\n\nfor (const [member, clocked] of Object.entries(clockedMap)) {\n  const delta        = clocked - PRORATED_AVAIL;\n  const utilisation  = Math.round((clocked / PRORATED_AVAIL) * 100);\n\n  let status, emoji;\n  if (delta <= SHORT_THRESHOLD) {\n    status = 'SHORTAGE'; emoji = '🔴';\n  } else if (delta >= EXCESS_THRESHOLD) {\n    status = 'EXCESS';   emoji = '🟢';\n  } else {\n    status = 'ON_TRACK'; emoji = '🟡';\n  }\n\n  results.push({\n    member,\n    month:           MONTH_LABEL,\n    full_avail_hrs:  FULL_AVAIL,\n    prorated_avail:  PRORATED_AVAIL,\n    clocked_hrs:     clocked,\n    delta,\n    utilisation_pct: utilisation,\n    status,\n    emoji,\n    alert_line: `${emoji} ${member}: ${clocked} hrs clocked / ${PRORATED_AVAIL} hrs expected | Delta: ${delta > 0 ? '+' : ''}${delta} hrs | ${utilisation}% | ${status}`\n  });\n}\n\nconst totalClocked    = results.reduce((s, r) => s + r.clocked_hrs, 0);\nconst totalProrated   = results.reduce((s, r) => s + r.prorated_avail, 0);\nconst totalDelta      = totalClocked - totalProrated;\nconst teamUtil        = Math.round((totalClocked / totalProrated) * 100);\n\nconst shortageMembers = results.filter(r => r.status === 'SHORTAGE');\nconst excessMembers   = results.filter(r => r.status === 'EXCESS');\nconst onTrackMembers  = results.filter(r => r.status === 'ON_TRACK');\n\nconst headerEmoji = totalDelta <= SHORT_THRESHOLD ? '🔴'\n                  : totalDelta >= EXCESS_THRESHOLD ? '🟢'\n                  : '🟡';\n\nconst slackMessage = [\n  `${headerEmoji} *Effort Report — ${MONTH_LABEL}* (Day ${DAYS_ELAPSED} of ${WORKING_DAYS})`,\n  ``,\n  `📊 *Team Summary*`,\n  `• Full month available:     *${FULL_AVAIL} hrs*`,\n  `• Prorated available today: *${totalProrated} hrs*`,\n  `• Total clocked:            *${totalClocked} hrs*`,\n  `• Team delta:               *${totalDelta > 0 ? '+' : ''}${totalDelta} hrs*`,\n  `• Team utilisation:         *${teamUtil}%*`,\n  ``,\n  `👥 *Member Breakdown*`,\n  ...results.map(r => r.alert_line),\n  ``,\n  shortageMembers.length > 0\n    ? `⚠️ *${shortageMembers.length} member(s) need attention:*\\n${shortageMembers.map(r => `   • ${r.member}: ${Math.abs(r.delta)} hrs short (${r.utilisation_pct}% utilised)`).join('\\n')}`\n    : `✅ No shortages — all members on track or ahead.`\n].join('\\n');\n\nreturn [{\n  json: {\n    month:             MONTH_LABEL,\n    working_days:      WORKING_DAYS,\n    days_elapsed:      DAYS_ELAPSED,\n    full_avail_hrs:    FULL_AVAIL,\n    total_available:   totalProrated,\n    total_clocked:     totalClocked,\n    total_delta:       totalDelta,\n    team_utilisation:  teamUtil,\n    shortage_count:    shortageMembers.length,\n    excess_count:      excessMembers.length,\n    on_track_count:    onTrackMembers.length,\n    shortage_members:  shortageMembers.map(r => r.member).join(', '),\n    excess_members:    excessMembers.map(r => r.member).join(', '),\n    member_details:    results,\n    slack_message:     slackMessage,\n    has_shortage:      shortageMembers.length > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        112
+      ],
+      "id": "3787aba3-024a-4306-ac7f-614afc6b9c1a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "073e8bb4-f7c6-4af9-85aa-13052eaef3d9",
+              "leftValue": "={{ $json.has_shortage }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        112
+      ],
+      "id": "67853c18-deeb-454c-9491-d2917e707d3b",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        720,
+        96
+      ],
+      "id": "6aaca1ee-1920-4f2c-a90f-a3eee36df660",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M",
+          "mode": "list",
+          "cachedResultName": "effort_tracker_nov25",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 101822555,
+          "mode": "list",
+          "cachedResultName": "n8n log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit#gid=101822555"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Month": "={{ $('Code in JavaScript').item.json.month }}",
+            "Total Available": "={{ $('Code in JavaScript').item.json.total_available }}",
+            "Total Delta": "={{ $('Code in JavaScript').item.json.total_delta }}",
+            "Team Utilisation": "={{ $('Code in JavaScript').item.json.team_utilisation }}",
+            "Shortage Members": "={{ $('Code in JavaScript').item.json.shortage_members }}",
+            "Shortage Count ": "={{ $('Code in JavaScript').item.json.shortage_count }}",
+            "Run At": "={{ new Date().toISOString() }}",
+            "Total Clocked": "={{ $('Code in JavaScript').item.json.total_clocked }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Clocked",
+              "displayName": "Total Clocked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Available",
+              "displayName": "Total Available",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Delta",
+              "displayName": "Total Delta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Team Utilisation",
+              "displayName": "Team Utilisation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Shortage Members",
+              "displayName": "Shortage Members",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Shortage Count ",
+              "displayName": "Shortage Count ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Run At",
+              "displayName": "Run At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        96
+      ],
+      "id": "0e7b7ed1-76ec-481a-b5f3-d03841f7c896",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2Lq2sXFhF7mK7ene",
+          "name": "Google Sheets account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M",
+          "mode": "list",
+          "cachedResultName": "effort_tracker_nov25",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 105928370,
+          "mode": "list",
+          "cachedResultName": "n8n Config",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit#gid=105928370"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -576,
+        112
+      ],
+      "id": "fd879483-05f4-4f99-a646-f1427eb7a137",
+      "name": "n8n config",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2Lq2sXFhF7mK7ene",
+          "name": "Google Sheets account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M",
+          "mode": "list",
+          "cachedResultName": "effort_tracker_nov25",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1776812846,
+          "mode": "list",
+          "cachedResultName": "Raw Time Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1pxkbFldXWzaJbRhdTqf8oPHn8ZsqfbMr_qdemR_VM9M/edit#gid=1776812846"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -368,
+        112
+      ],
+      "id": "4646302e-b87a-494c-a186-fcde0c8f0e8e",
+      "name": "Time Log",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2Lq2sXFhF7mK7ene",
+          "name": "Google Sheets account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "prashaanth.r@minorilabs.com",
+        "subject": "= Effort Shortage Alert — {{ $json.month }} | {{ $json.shortage_count }} Members Behind",
+        "emailType": "text",
+        "message": "={{ $json.slack_message }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "2706392f-60e4-4ad9-909c-a1b4be1ebd35",
+      "name": "True Branch",
+      "webhookId": "9bf3bcc8-124c-45e6-aafb-58a4bc9fea3b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OxCWWptucqmwVqBg",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "prashaanth.r@minorilabs.com",
+        "subject": "=Effort Report — {{ $json.month }} | Team On Track ({{ $json.team_utilisation }}% Utilised)",
+        "emailType": "text",
+        "message": "={{ $json.slack_message }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        240
+      ],
+      "id": "1be9eafe-a676-46d1-b2be-be2e64221f96",
+      "name": "False",
+      "webhookId": "53b99d24-29ce-4a96-92fb-2488c014a2f2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OxCWWptucqmwVqBg",
+          "name": "Gmail account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "n8n config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "True Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "False",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n config": {
+      "main": [
+        [
+          {
+            "node": "Time Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Time Log": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "True Branch": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "False": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "7a826d54-b41d-4ba2-b7a8-a3cd8d8b42d6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "76ce6b32161b2c2c4eb82a1c152a92c49942def96183088d14e95dc177fa21ad"
+  },
+  "id": "QmYmZwCppXsLBG0r",
+  "tags": []
+}
