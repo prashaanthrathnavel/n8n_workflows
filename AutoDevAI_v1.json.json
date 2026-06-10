@@ -1,0 +1,1003 @@
+{
+  "name": "AutoDev AI – Autonomous Software Development Team",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1776,
+        -352
+      ],
+      "id": "2292f29e-13c9-4f08-903f-b4adb86c7750",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"idea\": \"Build a Food Delivery Application\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1568,
+        -352
+      ],
+      "id": "e3841a0a-fb49-46ce-8de8-cd2751551d1c",
+      "name": "Project Idea"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1424,
+        -144
+      ],
+      "id": "ad36145d-b3fe-4c1d-8098-c37c72cbad36",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"project_name\": \"string\",\n  \"project_type\": \"string\",\n  \"description\": \"string\",\n  \"features\": [\n    \"string\"\n  ],\n  \"tech_stack\": [\n    \"string\"\n  ],\n  \"required_agents\": [\n    \"string\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1184,
+        -144
+      ],
+      "id": "ca4f9f64-54a4-41bc-a0ec-aa12fdd17bc1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Information:\n\n{{ JSON.stringify($json.output, null, 2) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Product Manager with 15 years of experience.\n\nYou have received a project blueprint from the CEO.\n\nGenerate a professional Product Requirements Document (PRD).\n\nInclude:\n\n1. Executive Summary\n2. Product Vision\n3. Target Audience\n4. Functional Requirements\n5. Non Functional Requirements\n6. User Stories\n7. Acceptance Criteria\n8. Risks and Assumptions\n9. Future Enhancements\n\nReturn detailed markdown.\n\nThink like a real Product Manager working at a software company."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1008,
+        -352
+      ],
+      "id": "ac555f9c-d231-48b2-918b-091db1a26e8b",
+      "name": "Product manager"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.idea}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are the CEO of an AI Software Development Company.\n\nAnalyze the software idea provided by the user.\n\nExtract:\n\n1. Project Name\n2. Project Type\n3. Project Description\n4. Core Features\n5. Suggested Technology Stack\n6. Required Team Members\n\nReturn only structured JSON matching the schema.\n\nDo not provide explanations.\nDo not return markdown.\nDo not return code blocks."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1360,
+        -352
+      ],
+      "id": "ee66391a-95c7-4d5d-8a0f-309420fb350a",
+      "name": "CEO"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"executive_summary\": \"string\",\n  \"product_vision\": \"string\",\n  \"target_audience\": [\n    \"string\"\n  ],\n  \"functional_requirements\": [\n    \"string\"\n  ],\n  \"non_functional_requirements\": [\n    \"string\"\n  ],\n  \"user_stories\": [\n    \"string\"\n  ],\n  \"acceptance_criteria\": [\n    \"string\"\n  ],\n  \"future_enhancements\": [\n    \"string\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        -144
+      ],
+      "id": "4c41a080-e00d-4224-b9a7-50eb904045fa",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        -144
+      ],
+      "id": "ff88134c-5bab-4719-8e66-fe548eba8b6d",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements Document:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nBased on the project blueprint and PRD, design:\n\n1. Architecture Type\n2. Frontend Architecture\n3. Backend Architecture\n4. Database Strategy\n5. API Design\n6. Security Design\n7. Deployment Strategy\n8. Non-Functional Requirements\n\nReturn only the structured output format requested.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Solution Architect with 15+ years of experience designing scalable enterprise applications.\n\nYou receive a Product Requirements Document (PRD) and project blueprint from the Product Manager.\n\nYour responsibility is to design the complete technical architecture for the application.\n\nAnalyze the requirements and generate:\n\n1. Architecture Type\n   - Monolithic or Microservices\n   - Justification\n\n2. Frontend Architecture\n   - Framework\n   - State Management\n   - Folder Structure\n\n3. Backend Architecture\n   - Framework\n   - Service Layers\n   - Authentication Strategy\n\n4. Database Design Strategy\n   - Database Choice\n   - Data Modeling Approach\n\n5. API Design\n   - Required Endpoints\n   - Request and Response Structure\n\n6. Security Considerations\n   - Authentication\n   - Authorization\n   - Data Protection\n   - API Security\n\n7. Deployment Architecture\n   - Hosting Platform\n   - CI/CD Pipeline\n   - Scaling Strategy\n\n8. Non-Functional Requirements\n   - Performance\n   - Scalability\n   - Reliability\n   - Monitoring\n\nProvide production-grade recommendations suitable for a real-world application.\n\nReturn structured JSON only.\n\nDo not provide explanations outside the JSON structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -656,
+        -352
+      ],
+      "id": "2e210edb-71f5-429a-b8c0-d031793fa092",
+      "name": "Architect"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -144
+      ],
+      "id": "c4d45268-6156-4332-b2c3-08773a8848b9",
+      "name": "Groq Chat Model2",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"architecture_type\": \"\",\n  \"architecture_reason\": \"\",\n  \"frontend\": {\n    \"framework\": \"\",\n    \"state_management\": \"\",\n    \"folder_structure\": []\n  },\n  \"backend\": {\n    \"framework\": \"\",\n    \"authentication\": \"\",\n    \"layers\": []\n  },\n  \"database\": {\n    \"database_type\": \"\",\n    \"reason\": \"\"\n  },\n  \"api_endpoints\": [],\n  \"security_considerations\": [],\n  \"deployment\": {\n    \"hosting\": \"\",\n    \"ci_cd\": \"\",\n    \"monitoring\": \"\"\n  },\n  \"non_functional_requirements\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        -144
+      ],
+      "id": "0211a912-e58b-412c-aa39-391abcf42edc",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDesign a production-ready database architecture.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Database Architect with 15+ years of experience designing scalable and high-performance databases.\n\nYou will receive:\n1. Project Blueprint\n2. Product Requirements Document\n3. Software Architecture Design\n\nYour task is to design a production-ready database.\n\nGenerate:\n\n1. Database Type Recommendation\n2. Entities\n3. Attributes for each Entity\n4. Relationships between Entities\n5. Primary Keys\n6. Foreign Keys\n7. Index Recommendations\n8. Database Constraints\n9. PostgreSQL Schema\n10. Scalability Considerations\n\nFollow database normalization best practices.\n\nEnsure the schema supports:\n- Performance\n- Scalability\n- Data Integrity\n- Security\n\nReturn structured JSON only.\n\nDo not provide explanations outside the JSON structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -288,
+        -352
+      ],
+      "id": "b91481a0-f542-4a55-92a0-44376bb4b2fd",
+      "name": "Database Designer"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"database_type\": \"\",\n  \"entities\": [],\n  \"relationships\": [],\n  \"primary_keys\": [],\n  \"foreign_keys\": [],\n  \"indexes\": [],\n  \"constraints\": [],\n  \"sql_schema\": \"\",\n  \"scalability_considerations\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -112,
+        -144
+      ],
+      "id": "cfcf4e02-9635-4c48-a5d7-b820025d1f8b",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -144
+      ],
+      "id": "ba066a68-e497-485c-9be4-14429c195f40",
+      "name": "Groq Chat Model3",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Design:\n\n{{ JSON.stringify($node[\"Database Designer\"].json.output, null, 2) }}\n\nGenerate a complete backend design.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Backend Engineer with 10+ years of experience building scalable APIs.\n\nYou will receive:\n\n1. Project Blueprint\n2. Product Requirements\n3. Architecture Design\n4. Database Design\n\nYour task is to generate a complete backend development plan.\n\nGenerate:\n\n1. Backend Framework\n2. Folder Structure\n3. API Endpoints\n4. Request Models\n5. Response Models\n6. Authentication Strategy\n7. Business Logic Services\n8. Database Access Layer\n9. Error Handling Strategy\n10. Deployment Considerations\n\nUse FastAPI and PostgreSQL.\n\nReturn structured JSON only.\n\nDo not provide explanations outside the JSON structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        64,
+        -352
+      ],
+      "id": "6767f2a4-be5c-4bc7-9d29-73f4e7306bcd",
+      "name": "Backend Developer"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -144
+      ],
+      "id": "90a0d561-5ffb-4e3e-a7c2-b2c27468bafd",
+      "name": "Groq Chat Model4",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"framework\": \"\",\n  \"folder_structure\": [],\n  \"api_endpoints\": [],\n  \"request_models\": [],\n  \"response_models\": [],\n  \"authentication\": \"\",\n  \"services\": [],\n  \"repositories\": [],\n  \"error_handling\": [],\n  \"deployment_considerations\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        -144
+      ],
+      "id": "a7014ff0-904e-4c5f-81f0-9c4e8a089208",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Design:\n\n{{ JSON.stringify($node[\"Database Designer\"].json.output, null, 2) }}\n\nBackend Design:\n\n{{ JSON.stringify($node[\"Backend Developer\"].json.output, null, 2) }}\n\nDesign a complete frontend architecture and implementation plan.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Frontend Engineer with 10+ years of experience building modern React applications.\n\nYou will receive:\n\n1. Project Blueprint\n2. Product Requirements Document\n3. Software Architecture\n4. Database Design\n5. Backend Design\n\nYour task is to design the frontend application.\n\nGenerate:\n\n1. Frontend Framework\n2. Project Folder Structure\n3. Application Pages\n4. Reusable Components\n5. State Management Strategy\n6. API Integration Plan\n7. Routing Structure\n8. Form Validation Strategy\n9. Authentication Flow\n10. UI Libraries\n11. Performance Optimizations\n12. Testing Strategy\n\nUse:\n- React\n- TypeScript\n- Redux Toolkit\n- React Router\n- Axios\n\nDesign the application using industry best practices.\n\nReturn structured JSON only.\n\nDo not provide explanations outside the JSON structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        -352
+      ],
+      "id": "a42350c3-c9ad-4251-90e3-7bea1e6f1fa0",
+      "name": "Frontend Developer"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -144
+      ],
+      "id": "80cabd81-33fb-4b26-a0b6-351327dfa191",
+      "name": "Groq Chat Model5",
+      "credentials": {
+        "groqApi": {
+          "id": "JdQXgMFgMiQdLCGR",
+          "name": "Groq account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"framework\": \"\",\n  \"language\": \"\",\n  \"folder_structure\": [],\n  \"pages\": [],\n  \"components\": [],\n  \"state_management\": \"\",\n  \"routing_structure\": [],\n  \"api_integrations\": [],\n  \"authentication_flow\": [],\n  \"form_validation\": [],\n  \"ui_libraries\": [],\n  \"performance_optimizations\": [],\n  \"testing_strategy\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        -144
+      ],
+      "id": "553e9b4f-8a01-47b9-9bf5-ee0808690142",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"functional_tests\": [],\n  \"integration_tests\": [],\n  \"api_tests\": [],\n  \"ui_tests\": [],\n  \"edge_cases\": [],\n  \"negative_tests\": [],\n  \"performance_tests\": [],\n  \"security_tests\": [],\n  \"automation_strategy\": [],\n  \"coverage_recommendations\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        -128
+      ],
+      "id": "7d5ed070-5162-44f6-9c58-2833cc7536ea",
+      "name": "Structured Output Parser6"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Design:\n\n{{ JSON.stringify($node[\"Database Designer\"].json.output, null, 2) }}\n\nBackend Design:\n\n{{ JSON.stringify($node[\"Backend Developer\"].json.output, null, 2) }}\n\nFrontend Design:\n\n{{ JSON.stringify($node[\"Frontend Developer\"].json.output, null, 2) }}\n\nCreate a complete testing strategy and test plan.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior QA Engineer with 10+ years of experience testing enterprise software applications.\n\nYou will receive:\n\n1. Project Blueprint\n2. Product Requirements Document\n3. Software Architecture\n4. Database Design\n5. Backend Design\n6. Frontend Design\n\nYour task is to create a complete software testing strategy.\n\nGenerate:\n\n1. Functional Test Cases\n2. Integration Test Cases\n3. API Test Cases\n4. UI Test Cases\n5. Edge Cases\n6. Negative Test Cases\n7. Performance Test Scenarios\n8. Security Test Scenarios\n9. Test Automation Recommendations\n10. Test Coverage Recommendations\n\nDesign test cases that ensure quality, reliability, scalability, and security.\n\nReturn structured JSON only.\n\nDo not provide explanations outside the JSON structure."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        768,
+        -352
+      ],
+      "id": "d0206b5a-f2a2-4fdd-84be-53d8e17fbbc9",
+      "name": "QA Engineer"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -128
+      ],
+      "id": "c5570466-d5bc-4e4c-8c61-fe64b323f3b4",
+      "name": "Groq Chat Model6",
+      "credentials": {
+        "groqApi": {
+          "id": "JdQXgMFgMiQdLCGR",
+          "name": "Groq account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Name:\n{{ $node[\"CEO\"].json.output.project_name }}\n\nFeatures:\n{{ JSON.stringify($node[\"CEO\"].json.output.features, null, 2) }}\n\nDatabase:\n{{ JSON.stringify($node[\"Database Designer\"].json.output.entities, null, 2) }}\n\nAPI Endpoints:\n{{ JSON.stringify($node[\"Backend Developer\"].json.output.api_endpoints, null, 2) }}\n\nFrontend Pages:\n{{ JSON.stringify($node[\"Frontend Developer\"].json.output.pages, null, 2) }}\n\nQA Findings:\n{{ JSON.stringify($node[\"QA Engineer\"].json.output, null, 2) }}\n\nPerform a complete security assessment.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior Security Architect with 10+ years of experience securing enterprise applications.\n\nYou will receive:\n\n1. Project Blueprint\n2. Architecture Design\n3. Database Design\n4. Backend Design\n5. Frontend Design\n6. QA Analysis\n\nYour task is to perform a complete security review.\n\nGenerate:\n\n1. Security Risks\n2. Vulnerabilities\n3. Authentication Recommendations\n4. Authorization Recommendations\n5. API Security Recommendations\n6. Data Protection Recommendations\n7. Compliance Recommendations\n8. Security Best Practices\n\nReturn structured JSON only."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1088,
+        -352
+      ],
+      "id": "ce8bff53-1763-4cc3-be36-a5f3ca84bbad",
+      "name": "Security Auditor"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        -128
+      ],
+      "id": "5fae63a0-5327-4495-b00c-ea000c691b0d",
+      "name": "Groq Chat Model7",
+      "credentials": {
+        "groqApi": {
+          "id": "JdQXgMFgMiQdLCGR",
+          "name": "Groq account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"security_risks\": [],\n  \"vulnerabilities\": [],\n  \"authentication\": [],\n  \"authorization\": [],\n  \"api_security\": [],\n  \"data_protection\": [],\n  \"compliance\": [],\n  \"best_practices\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        -144
+      ],
+      "id": "1006f0a2-6aa4-47d5-be73-43b390681086",
+      "name": "Structured Output Parser7"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -144
+      ],
+      "id": "691ae116-ca81-45a9-a09e-746444e48e82",
+      "name": "Groq Chat Model8",
+      "credentials": {
+        "groqApi": {
+          "id": "JdQXgMFgMiQdLCGR",
+          "name": "Groq account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"infrastructure\": [],\n  \"docker_strategy\": [],\n  \"cicd_pipeline\": [],\n  \"monitoring\": [],\n  \"logging\": [],\n  \"backup\": [],\n  \"scaling\": [],\n  \"disaster_recovery\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1616,
+        -144
+      ],
+      "id": "698cba77-4d71-480d-b095-a2b62b30798a",
+      "name": "Structured Output Parser8"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Name:\n{{ $node[\"CEO\"].json.output.project_name }}\n\nProject Type:\n{{ $node[\"CEO\"].json.output.project_type }}\n\nTechnology Stack:\n{{ JSON.stringify($node[\"CEO\"].json.output.tech_stack, null, 2) }}\n\nArchitecture:\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Type:\n{{ $node[\"Database Designer\"].json.output.database_type }}\n\nAPI Endpoints:\n{{ JSON.stringify($node[\"Backend Developer\"].json.output.api_endpoints, null, 2) }}\n\nFrontend Framework:\n{{ $node[\"Frontend Developer\"].json.output.framework }}\n\nSecurity Recommendations:\n{{ JSON.stringify($node[\"Security Auditor\"].json.output.best_practices, null, 2) }}\n\nDesign a complete production-ready DevOps and deployment strategy.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Senior DevOps Engineer.\n\nDesign a production-ready deployment strategy.\n\nGenerate:\n\n1. Infrastructure Architecture\n2. Docker Strategy\n3. CI/CD Pipeline\n4. Monitoring Strategy\n5. Logging Strategy\n6. Backup Strategy\n7. Scaling Strategy\n8. Disaster Recovery Plan\n\nReturn structured JSON only."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1440,
+        -352
+      ],
+      "id": "f7c0ca0e-5759-4a34-9287-4e37e2db48e9",
+      "name": "DevOps Engineer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Design:\n\n{{ JSON.stringify($node[\"Database Designer\"].json.output, null, 2) }}\n\nBackend Design:\n\n{{ JSON.stringify($node[\"Backend Developer\"].json.output, null, 2) }}\n\nFrontend Design:\n\n{{ JSON.stringify($node[\"Frontend Developer\"].json.output, null, 2) }}\n\nQA Strategy:\n\n{{ JSON.stringify($node[\"QA Engineer\"].json.output, null, 2) }}\n\nSecurity Review:\n\n{{ JSON.stringify($node[\"Security Auditor\"].json.output, null, 2) }}\n\nDevOps Strategy:\n\n{{ JSON.stringify($node[\"DevOps Engineer\"].json.output, null, 2) }}\n\nGenerate a professional README.md document for this software project.\n\nInclude:\n\n1. Executive Summary\n2. Project Overview\n3. Features\n4. Architecture Overview\n5. Database Design\n6. Backend Design\n7. Frontend Design\n8. Testing Strategy\n9. Security Strategy\n10. Deployment Strategy\n11. Setup Instructions\n12. Future Enhancements\n\nOutput professional markdown only.",
+        "options": {
+          "systemMessage": "=You are a Senior Technical Writer with experience documenting enterprise software systems.\n\nYou will receive outputs from multiple engineering teams.\n\nYour task is to create a professional README.md document suitable for:\n\n- GitHub\n- Portfolio Projects\n- Technical Documentation\n- Recruiter Review\n\nCreate clear, concise, and professional documentation.\n\nUse proper markdown formatting.\n\nInclude:\n- Title\n- Executive Summary\n- Features\n- Architecture\n- Database Design\n- Backend Design\n- Frontend Design\n- QA Strategy\n- Security Strategy\n- DevOps Strategy\n- Setup Instructions\n- Future Enhancements\n\nOutput markdown only."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1792,
+        -352
+      ],
+      "id": "8929c558-b614-4e97-849c-f072228cf7bd",
+      "name": "Document Writer"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        -144
+      ],
+      "id": "97f1460e-318f-4364-8a3c-cf347c32015a",
+      "name": "Groq Chat Model9",
+      "credentials": {
+        "groqApi": {
+          "id": "8IwU3wRR8CijwuDK",
+          "name": "Groq account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Project Blueprint:\n\n{{ JSON.stringify($node[\"CEO\"].json.output, null, 2) }}\n\nProduct Requirements:\n\n{{ JSON.stringify($node[\"Product manager\"].json.output, null, 2) }}\n\nArchitecture Design:\n\n{{ JSON.stringify($node[\"Architect\"].json.output, null, 2) }}\n\nDatabase Design:\n\n{{ JSON.stringify($node[\"Database Designer\"].json.output, null, 2) }}\n\nBackend Design:\n\n{{ JSON.stringify($node[\"Backend Developer\"].json.output, null, 2) }}\n\nFrontend Design:\n\n{{ JSON.stringify($node[\"Frontend Developer\"].json.output, null, 2) }}\n\nQA Strategy:\n\n{{ JSON.stringify($node[\"QA Engineer\"].json.output, null, 2) }}\n\nSecurity Review:\n\n{{ JSON.stringify($node[\"Security Auditor\"].json.output, null, 2) }}\n\nDevOps Strategy:\n\n{{ JSON.stringify($node[\"DevOps Engineer\"].json.output, null, 2) }}\n\nDocumentation:\n\n{{ $node[\"Document Writer\"].json.output }}\n\nCreate a final project delivery package.",
+        "options": {
+          "systemMessage": "=You are a Software Delivery Manager.\n\nYou will receive outputs from multiple software engineering teams.\n\nYour responsibility is to assemble all deliverables into a final project package.\n\nGenerate:\n\n1. Executive Summary\n2. Project Scope\n3. Product Requirements Summary\n4. Architecture Summary\n5. Database Summary\n6. Backend Summary\n7. Frontend Summary\n8. QA Summary\n9. Security Summary\n10. DevOps Summary\n11. Documentation Summary\n12. Recommended Project Folder Structure\n13. Development Roadmap\n14. Deployment Roadmap\n\nCreate a consolidated project report suitable for:\n\n- Clients\n- Project Managers\n- Technical Leads\n- Recruiters\n- Portfolio Showcase\n\nReturn professional markdown."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2144,
+        -352
+      ],
+      "id": "f87ea4b5-77c7-49ce-8071-a980fe87dc52",
+      "name": "Project Assembler"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        -160
+      ],
+      "id": "8e788eb8-9150-45b5-8f24-a6be351336e4",
+      "name": "Groq Chat Model10",
+      "credentials": {
+        "groqApi": {
+          "id": "K2XlQ5Iz79dD9cdS",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst report = $input.first().json.output;\n\nreturn [\n  {\n    json: {\n      filename: \"Project_Report.md\",\n      content: report\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        -352
+      ],
+      "id": "5617c1ea-cfec-41a6-ba0e-39f39499eed4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "owner": {
+          "__rl": true,
+          "value": "prashaanthrathnavel",
+          "mode": "list",
+          "cachedResultName": "prashaanthrathnavel",
+          "cachedResultUrl": "https://github.com/prashaanthrathnavel"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n_workflows",
+          "mode": "list",
+          "cachedResultName": "n8n_workflows",
+          "cachedResultUrl": "https://github.com/prashaanthrathnavel/n8n_workflows"
+        },
+        "filePath": "Project_Report.md",
+        "fileContent": "={{ $json.content }}",
+        "commitMessage": "=AutoDev AI generated project report"
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        2704,
+        -352
+      ],
+      "id": "0ee0b963-8132-4344-9aba-605545e04868",
+      "name": "Create a file",
+      "webhookId": "13b76e6f-4fa6-4a9d-951b-0c4c33eda417",
+      "credentials": {
+        "githubApi": {
+          "id": "l0Whz8ZH1WoFQIuN",
+          "name": "GitHub account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Project Idea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Idea": {
+      "main": [
+        [
+          {
+            "node": "CEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "CEO",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "CEO",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEO": {
+      "main": [
+        [
+          {
+            "node": "Product manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Product manager",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Product manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product manager": {
+      "main": [
+        [
+          {
+            "node": "Architect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Architect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Architect",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Architect": {
+      "main": [
+        [
+          {
+            "node": "Database Designer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Database Designer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Database Designer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Database Designer": {
+      "main": [
+        [
+          {
+            "node": "Backend Developer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Backend Developer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Backend Developer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backend Developer": {
+      "main": [
+        [
+          {
+            "node": "Frontend Developer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Frontend Developer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Frontend Developer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Frontend Developer": {
+      "main": [
+        [
+          {
+            "node": "QA Engineer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser6": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "QA Engineer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "QA Engineer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QA Engineer": {
+      "main": [
+        [
+          {
+            "node": "Security Auditor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Security Auditor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser7": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Security Auditor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Auditor": {
+      "main": [
+        [
+          {
+            "node": "DevOps Engineer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "DevOps Engineer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser8": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "DevOps Engineer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DevOps Engineer": {
+      "main": [
+        [
+          {
+            "node": "Document Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model9": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Document Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Writer": {
+      "main": [
+        [
+          {
+            "node": "Project Assembler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Project Assembler",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Assembler": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b0d5d8e9-1d2e-4ca2-8357-308647bb62a7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50b96d1ff02defbf8481eb50e71c666cf85d4ed755eeaffdc4411f5223e3db4e"
+  },
+  "id": "uQ0I2ps7i5HQgl58dr0re",
+  "tags": []
+}
