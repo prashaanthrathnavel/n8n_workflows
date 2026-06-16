@@ -1,0 +1,294 @@
+{
+  "name": "AI Print App - Smart Xerox Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "print-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0bfa8944-e7a0-4d7a-9a5a-16f547dc887d",
+      "name": "1. Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        192,
+        320
+      ],
+      "webhookId": "5f49dd4d-0c49-4285-86ca-c7621c368ff2",
+      "notes": "Entry point. Receives PDF file + user name, phone, and location (lat/lng) from the mobile/web app."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse document metadata from the HTTP response\nconst data = $input.first().json;\n\n// Extract page count\nconst pageCount = data.pageCount || data.pages || 1;\n\n// Detect color vs B&W\nconst isColor = data.colorPages > 0 || data.hasColor || false;\n\n// Determine paper size\nconst paperSize = data.paperSize || 'A4';\n\n// Calculate base price estimate (INR)\nconst pricePerPageBW = 1.5;\nconst pricePerPageColor = 8;\nconst estimatedPrice = isColor\n  ? pageCount * pricePerPageColor\n  : pageCount * pricePerPageBW;\n\n// Get user info from original webhook payload\nconst userLat   = $('1. Webhook Trigger').first().json.body.lat;\nconst userLng   = $('1. Webhook Trigger').first().json.body.lng;\nconst userName  = $('1. Webhook Trigger').first().json.body.name;\nconst userPhone = $('1. Webhook Trigger').first().json.body.phone;\nconst fileName  = $('1. Webhook Trigger').first().json.body.filename;\n\nreturn [{\n  json: {\n    pageCount,\n    isColor,\n    paperSize,\n    estimatedPrice,\n    userLat,\n    userLng,\n    userName,\n    userPhone,\n    fileName\n  }\n}];"
+      },
+      "id": "c55453f9-71d6-4b62-8468-7dc9b19eecdf",
+      "name": "2. Code Node - Parse & Calculate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        320
+      ],
+      "notes": "JavaScript logic to parse page count, detect color vs B&W, calculate base price estimate, and structure data for the AI node."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer YourGroq API key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a smart print assistant. Give short, helpful advice in plain text only. No markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"A user wants to print a document with these details:\\n- File: {{ $json.fileName }}\\n- Pages: {{ $json.pageCount }}\\n- Mode: {{ $json.isColor ? 'Color' : 'Black & White' }}\\n- Paper: {{ $json.paperSize }}\\n- Est. Price: \\u20b9{{ $json.estimatedPrice }}\\n\\nGive: 1) Best print settings 2) A cost-saving tip 3) A friendly one-line message. Under 100 words.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "17214716-d275-4106-ad10-8e6b5abb8cd5",
+      "name": "3. AI Node - Groq API (LLaMA 3.3 70B)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        704,
+        320
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Yy94nEQDgiDGXysR",
+          "name": "Header Auth account"
+        }
+      },
+      "notes": "Calls Groq API using LLaMA 3.3 70B model. Ultra-fast inference, free tier available. Returns smart print recommendations and cost-saving tips."
+    },
+    {
+      "parameters": {
+        "url": "=https://overpass-api.de/api/interpreter?data=[out:json];node[\"amenity\"=\"copy_shop\"](around:3000,{{ $('2. Code Node - Parse & Calculate').first().json.userLat }},{{ $('2. Code Node - Parse & Calculate').first().json.userLng }});out;",
+        "options": {}
+      },
+      "id": "188f37c1-f36f-4591-8138-4c762fa2effe",
+      "name": "4. HTTP Request - Google Maps Nearby Shops",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        928,
+        320
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Uses Google Places API to find Xerox/print shops within 3km of the user's location. Returns shop names, ratings, and open/closed status."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.results[0].opening_hours.open_now }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c8107386-db45-4eaa-8fae-cfa6826c4360",
+      "name": "5. IF Node - Shop Open Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        320
+      ],
+      "notes": "Checks if the nearest print shop is currently open. True = open, send confirmation. False = closed, notify user of shop hours."
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "userName",
+              "stringValue": "={{ $('2. Code Node - Parse & Calculate').first().json.userName }}"
+            },
+            {
+              "name": "userPhone",
+              "stringValue": "={{ $('2. Code Node - Parse & Calculate').first().json.userPhone }}"
+            },
+            {
+              "name": "fileName",
+              "stringValue": "={{ $('2. Code Node - Parse & Calculate').first().json.fileName }}"
+            },
+            {
+              "name": "pageCount",
+              "type": "numberValue",
+              "numberValue": "={{ $('2. Code Node - Parse & Calculate').first().json.pageCount }}"
+            },
+            {
+              "name": "estimatedPrice",
+              "type": "numberValue",
+              "numberValue": "={{ $('2. Code Node - Parse & Calculate').first().json.estimatedPrice }}"
+            },
+            {
+              "name": "shopName",
+              "stringValue": "=Sri Murugan Xerox Shop"
+            },
+            {
+              "name": "shopAddress",
+              "stringValue": "=Anna Nagar, Coimbatore"
+            },
+            {
+              "name": "shopRating",
+              "stringValue": "=4.5"
+            },
+            {
+              "name": "aiSuggestion",
+              "stringValue": "={{ $('3. AI Node - Groq API (LLaMA 3.3 70B)').first().json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef841ec9-6d55-4636-bc2d-ecf5d4484485",
+      "name": "6. Set Node - Structure Final Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        1472,
+        320
+      ],
+      "notes": "Combines all data — user info, nearest shop, price estimate, Groq AI suggestions — into a clean structured object for the notification node."
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "+918110852112",
+        "toWhatsapp": true,
+        "message": "=Hi {{ $json.userName }}!\n\nYour print request is ready 🖨️\n\n📄 File: {{ $json.fileName }}\n📃 Pages: {{ $json.pageCount }}\n💰 Estimated Cost: ₹{{ $json.estimatedPrice }}\n\n📍 Nearest Shop:\n{{ $json.shopName }}\n{{ $json.shopAddress }}\n⭐ Rating: {{ $json.shopRating }}/5\n\n🤖 AI Tip:\n{{ $json.aiSuggestion }}\n\nHead over and get it printed! ✅",
+        "options": {}
+      },
+      "id": "7325ccea-fbd4-4f8e-904f-f112955bad8b",
+      "name": "7. WhatsApp Node (Twilio) - Send Confirmation",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        336
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "LvLyPuZ1oyGppZNQ",
+          "name": "Twilio account"
+        }
+      },
+      "notes": "Sends a WhatsApp message to the user with file summary, estimated price, nearest open shop details, and Groq AI print tips."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "1. Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "2. Code Node - Parse & Calculate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Code Node - Parse & Calculate": {
+      "main": [
+        [
+          {
+            "node": "3. AI Node - Groq API (LLaMA 3.3 70B)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. AI Node - Groq API (LLaMA 3.3 70B)": {
+      "main": [
+        [
+          {
+            "node": "4. HTTP Request - Google Maps Nearby Shops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. HTTP Request - Google Maps Nearby Shops": {
+      "main": [
+        [
+          {
+            "node": "5. IF Node - Shop Open Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. IF Node - Shop Open Check": {
+      "main": [
+        [
+          {
+            "node": "6. Set Node - Structure Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "6. Set Node - Structure Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Set Node - Structure Final Output": {
+      "main": [
+        [
+          {
+            "node": "7. WhatsApp Node (Twilio) - Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "e983b02c-2996-4c9f-8b2c-e91e95e30acc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50b96d1ff02defbf8481eb50e71c666cf85d4ed755eeaffdc4411f5223e3db4e"
+  },
+  "id": "YveEUtRGheFXKWpOQvKJi",
+  "tags": []
+}
